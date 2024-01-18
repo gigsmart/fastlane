@@ -14,10 +14,8 @@ module Spaceship
       attr_accessor :is_opted_in_to_distribute_ios_app_on_mac_app_store
       attr_accessor :removed
       attr_accessor :is_aag
-      attr_accessor :available_in_new_territories
       attr_accessor :content_rights_declaration
       attr_accessor :app_store_versions
-      attr_accessor :prices
 
       # Only available with Apple ID auth
       attr_accessor :distribution_type
@@ -47,7 +45,6 @@ module Spaceship
         "isOptedInToDistributeIosAppOnMacAppStore" => "is_opted_in_to_distribute_ios_app_on_mac_app_store",
         "removed" => "removed",
         "isAAG" => "is_aag",
-        "availableInNewTerritories" => "available_in_new_territories",
         "distributionType" => "distribution_type",
         "educationDiscountType" => "education_discount_type",
 
@@ -55,7 +52,6 @@ module Spaceship
 
         "appStoreVersions" => "app_store_versions",
         # This attribute is already deprecated. It will be removed in a future release.
-        "prices" => "prices"
       })
 
       ESSENTIAL_INCLUDES = [
