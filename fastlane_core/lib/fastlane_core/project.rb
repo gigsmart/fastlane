@@ -307,6 +307,10 @@ module FastlaneCore
       supported_platforms.include?(:watchOS)
     end
 
+    def visionos?
+      supported_platforms.include?(:visionOS)
+    end
+
     def multiplatform?
       supported_platforms.count > 1
     end
@@ -323,6 +327,7 @@ module FastlaneCore
         when "iphonesimulator", "iphoneos" then :iOS
         when "watchsimulator", "watchos" then :watchOS
         when "appletvsimulator", "appletvos" then :tvOS
+        when "xros", "xrsimulator" then :visionOS
         end
       end.uniq.compact
     end
@@ -336,6 +341,7 @@ module FastlaneCore
       proj << "-derivedDataPath #{options[:derived_data_path].shellescape}" if options[:derived_data_path]
       proj << "-xcconfig #{options[:xcconfig].shellescape}" if options[:xcconfig]
       proj << "-scmProvider system" if options[:use_system_scm]
+      proj << "-packageAuthorizationProvider #{options[:package_authorization_provider].shellescape}" if options[:package_authorization_provider]
 
       xcode_at_least_11 = FastlaneCore::Helper.xcode_at_least?('11.0')
       if xcode_at_least_11 && options[:cloned_source_packages_path]

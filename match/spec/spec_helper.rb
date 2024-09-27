@@ -12,13 +12,13 @@ end
 def create_fake_storage(match_config:, repo_dir:)
   fake_storage = "fake_storage"
   expect(Match::Storage::GitStorage).to receive(:configure).with({
-    git_url: match_config[:git_url],
-    shallow_clone: true,
-    skip_docs: false,
-    git_branch: "master",
+    git_url: match_config[:git_url] || default_git_url,
+    shallow_clone: match_config[:shallow_clone] || false,
+    skip_docs: match_config[:skip_docs] || false,
+    git_branch: match_config[:git_branch] || "master",
     git_full_name: nil,
     git_user_email: nil,
-    clone_branch_directly: false,
+    clone_branch_directly: match_config[:clone_branch_directly] || false,
     git_basic_authorization: nil,
     git_bearer_authorization: nil,
     git_private_key: nil,
@@ -74,7 +74,7 @@ end
 
 def create_fake_encryption(storage:)
   fake_encryption = "fake_encryption"
-  expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: storage.git_url, working_directory: storage.working_directory).and_return(fake_encryption)
+  expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: storage.git_url, working_directory: storage.working_directory, force_legacy_encryption: false).and_return(fake_encryption)
 
   # Ensure files from storage are decrypted.
   expect(fake_encryption).to receive(:decrypt_files).and_return(nil)

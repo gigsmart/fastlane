@@ -77,7 +77,8 @@ describe Match do
               File.join(repo_dir, "something.cer"),
               File.join(repo_dir, "something.p12"), # this is important, as a cert consists out of 2 files
               "./match/spec/fixtures/test.mobileprovision"
-            ]
+            ],
+            files_to_delete: []
           )
 
           spaceship = "spaceship"
@@ -142,7 +143,7 @@ describe Match do
           allow(fake_storage).to receive(:prefixed_working_directory).and_return(repo_dir)
 
           fake_encryption = "fake_encryption"
-          expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: fake_storage.git_url, working_directory: fake_storage.working_directory).and_return(fake_encryption)
+          expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: fake_storage.git_url, working_directory: fake_storage.working_directory, force_legacy_encryption: false).and_return(fake_encryption)
           expect(fake_encryption).to receive(:decrypt_files).and_return(nil)
 
           expect(Match::Utils).to receive(:import).with(key_path, keychain, password: nil).and_return(nil)
@@ -178,13 +179,14 @@ describe Match do
                                                                              type: "appstore")]).to eql("fastlane certificate name")
         end
 
-        it "fails because of an outdated certificate", requires_security: true do
+        it "fails because of an outdated certificate in readonly mode", requires_security: true do
           git_url = "https://github.com/fastlane/fastlane/tree/master/certificates"
           values = {
             app_identifier: "tools.fastlane.app",
             type: "appstore",
             git_url: git_url,
-            username: "flapple@something.com"
+            username: "flapple@something.com",
+            readonly: true
           }
 
           config = FastlaneCore::Configuration.create(Match::Options.available_options, values)
@@ -194,36 +196,15 @@ describe Match do
 
           create_fake_cache
 
-          fake_storage = "fake_storage"
-          expect(Match::Storage::GitStorage).to receive(:configure).with({
-            git_url: git_url,
-            shallow_clone: false,
-            skip_docs: false,
-            git_branch: "master",
-            git_full_name: nil,
-            git_user_email: nil,
-            clone_branch_directly: false,
-            git_basic_authorization: nil,
-            git_bearer_authorization: nil,
-            git_private_key: nil,
-            type: config[:type],
-            platform: config[:platform]
-          }).and_return(fake_storage)
-
-          expect(fake_storage).to receive(:download).and_return(nil)
-          expect(fake_storage).to receive(:clear_changes).and_return(nil)
-          allow(fake_storage).to receive(:git_url).and_return(git_url)
-          allow(fake_storage).to receive(:working_directory).and_return(repo_dir)
-          allow(fake_storage).to receive(:prefixed_working_directory).and_return(repo_dir)
+          fake_storage = create_fake_storage(match_config: config, repo_dir: repo_dir)
 
           fake_encryption = "fake_encryption"
-          expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: fake_storage.git_url, working_directory: fake_storage.working_directory).and_return(fake_encryption)
+          expect(Match::Encryption::OpenSSL).to receive(:new).with(keychain_name: fake_storage.git_url, working_directory: fake_storage.working_directory, force_legacy_encryption: false).and_return(fake_encryption)
           expect(fake_encryption).to receive(:decrypt_files).and_return(nil)
 
           spaceship = "spaceship"
           allow(spaceship).to receive(:team_id).and_return("")
-          expect(Match::SpaceshipEnsure).to receive(:new).and_return(spaceship)
-          expect(spaceship).to receive(:bundle_identifier_exists).and_return(true)
+          expect(Match::SpaceshipEnsure).not_to receive(:new)
 
           expect(Match::Utils).to receive(:is_cert_valid?).and_return(false)
 
@@ -243,6 +224,7 @@ describe Match do
 
           # match options
           match_test_options = {
+            output_path: "tmp/match_certs", # to test the expectation that we do a file copy when this option is provided
             readonly: true # Current test suite.
           }
           match_config = create_match_config_with_git_storage(extra_values: match_test_options)
@@ -276,6 +258,12 @@ describe Match do
             expect(FastlaneCore::ProvisioningProfile).to receive(:install).with(stored_valid_profile_path, keychain_path)
             expect(Match::Generator).not_to receive(:generate_provisioning_profile)
           end
+
+          # output_path
+          expect(FileUtils).to receive(:mkdir_p).with(match_test_options[:output_path])
+          expect(FileUtils).to receive(:cp).with(stored_valid_cert_path, match_test_options[:output_path])
+          expect(FileUtils).to receive(:cp).with("#{repo_dir}/certs/distribution/E7P4EE896K.p12", match_test_options[:output_path])
+          expect(FileUtils).to receive(:cp).with(stored_valid_profile_path, match_test_options[:output_path])
 
           # WHEN
           Match::Runner.new.run(match_config)
@@ -330,7 +318,8 @@ describe Match do
             files_to_commit: [
               File.join(repo_dir, "something.cer"),
               File.join(repo_dir, "something.p12") # this is important, as a cert consists out of 2 files
-            ]
+            ],
+            files_to_delete: []
           )
 
           spaceship = "spaceship"
